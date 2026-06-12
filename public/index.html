@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#4575e8"/>
+<title>Nexus Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<style>
+:root{
+  --bg:#e8edf5;--bg2:#dde4ef;--surf:#f0f4fb;--w:#fff;--bdr:#cdd5e5;
+  --sh:3px 3px 8px #bfc9d7,-2px -2px 6px #fff;
+  --shsm:2px 2px 5px #c8d0de,-1px -1px 4px #fff;
+  --shin:inset 2px 2px 5px #bfc9d7,inset -2px -2px 5px #fff;
+  --a:#4575e8;--a2:#7c56f5;
+  --tx:#1a2540;--tx2:#526080;--tx3:#8fa0bc;
+  --red:#e8414a;--gold:#f0a820;--pur:#a048f0;--grn:#20c86a;
+  --r:14px;--rsm:9px;--fn:'Sora',sans-serif;
+  --tb:52px;--bn:58px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;height:100dvh}
+body{font-family:var(--fn);background:var(--bg);color:var(--tx);overflow:hidden;-webkit-tap-highlight-color:transparent}
+input,textarea,button{font-family:var(--fn)}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+.hi{display:none!important}
+
+/* ── AUTH ── */
+#A{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#d0e0fa,#ddd0fa);padding:16px;overflow-y:auto}
+.ac{background:var(--w);border-radius:24px;padding:32px 24px 28px;width:100%;max-width:400px;
+  box-shadow:var(--sh);border:1.5px solid var(--bdr);position:relative;overflow:hidden}
+.ac::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,var(--a),var(--a2))}
+.alo{text-align:center;margin-bottom:24px}
+.aico{width:60px;height:60px;border-radius:18px;background:linear-gradient(140deg,var(--a),var(--a2));
+  display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:10px;box-shadow:var(--sh)}
+.alo h1{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.alo h1 span{color:var(--a)}
+.alo p{font-size:12px;color:var(--tx2);margin-top:3px}
+.ats{display:flex;background:var(--bg2);border-radius:var(--rsm);padding:3px;gap:3px;
+  margin-bottom:20px;box-shadow:var(--shin)}
+.at{flex:1;padding:8px;border:none;background:transparent;border-radius:6px;
+  font-size:13px;font-weight:700;color:var(--tx2);cursor:pointer;transition:all .2s}
+.at.on{background:var(--w);color:var(--a);box-shadow:var(--shsm)}
+.fg{margin-bottom:13px}
+.fg label{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--tx2);
+  margin-bottom:5px;text-transform:uppercase}
+.fg input{width:100%;padding:11px 13px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  font-size:14px;color:var(--tx);background:var(--bg2);outline:none;box-shadow:var(--shin);transition:border-color .2s}
+.fg input:focus{border-color:var(--a)}
+.bp{width:100%;padding:13px;background:linear-gradient(135deg,var(--a),var(--a2));
+  color:#fff;border:none;border-radius:var(--rsm);font-size:14px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 0 #2e5ccc,var(--shsm);transition:all .15s;position:relative;top:0}
+.bp:active{top:3px;box-shadow:0 1px 0 #2e5ccc}
+.am{border-radius:var(--rsm);padding:9px 12px;font-size:13px;margin-bottom:12px;display:none}
+.am.e{background:#fef2f2;border:1px solid #fecaca;color:var(--red)}
+.am.o{background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a}
+
+/* ── APP ── */
+#P{display:none;flex-direction:column;height:100%;height:100dvh}
+#P.on{display:flex}
+.tb{height:var(--tb);flex-shrink:0;background:var(--w);border-bottom:1.5px solid var(--bdr);
+  display:flex;align-items:center;padding:0 12px;gap:8px;box-shadow:0 3px 0 var(--bdr);z-index:200}
+.tbl{font-size:16px;font-weight:800;color:var(--a);letter-spacing:-.4px}
+.tbl span{color:var(--tx2);font-weight:400;font-size:12px}
+.tbr{margin-left:auto;display:flex;align-items:center;gap:7px}
+/* desktop tabs */
+.dts{display:none;gap:3px;background:var(--bg2);border-radius:var(--rsm);padding:3px;box-shadow:var(--shin)}
+.dt{padding:6px 11px;border:none;background:transparent;border-radius:6px;font-size:12px;font-weight:600;
+  color:var(--tx2);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.dt.on{background:var(--w);color:var(--a);box-shadow:var(--shsm)}
+/* role badge */
+.rb{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.3px;white-space:nowrap}
+.rb-admin{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
+.rb-vip{background:#fffbeb;color:var(--gold);border:1px solid #fde68a}
+.rb-member{background:#f5f3ff;color:var(--pur);border:1px solid #ddd6fe}
+.rb-guest{background:var(--bg2);color:var(--tx2);border:1px solid var(--bdr)}
+/* small avatar */
+.av{width:33px;height:33px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--a),var(--a2));display:flex;align-items:center;
+  justify-content:center;color:#fff;font-size:13px;font-weight:700;
+  box-shadow:var(--shsm);cursor:pointer;overflow:hidden;border:2px solid var(--w)}
+.av img{width:100%;height:100%;object-fit:cover}
+.ib{width:32px;height:32px;border-radius:var(--rsm);border:1.5px solid var(--bdr);background:var(--bg2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;
+  box-shadow:var(--shsm);flex-shrink:0}
+.ib:active{box-shadow:var(--shin)}
+.main{flex:1;overflow:hidden;display:flex;position:relative}
+
+/* ── HOME ── */
+#HV{position:absolute;inset:0;display:flex;overflow:hidden}
+.sb{width:100%;flex-shrink:0;display:flex;flex-direction:column;background:var(--w);
+  transition:transform .26s cubic-bezier(.4,0,.2,1);transform:translateX(0);overflow:hidden}
+.sb.aw{transform:translateX(-100%)}
+.sbh{padding:13px 13px 9px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--bdr);flex-shrink:0}
+.sbh h3{font-size:13px;font-weight:700}
+.sbs{padding:9px 11px;position:relative;flex-shrink:0}
+.sbs input{width:100%;padding:8px 13px 8px 30px;border:1.5px solid var(--bdr);
+  border-radius:var(--rsm);font-size:13px;background:var(--bg2);outline:none;
+  box-shadow:var(--shin);transition:border-color .2s}
+.sbs input:focus{border-color:var(--a)}
+.sbs .si{position:absolute;left:20px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--tx3)}
+.rl{flex:1;overflow-y:auto;padding:4px 7px}
+.ri{display:flex;align-items:center;gap:9px;padding:9px;border-radius:var(--rsm);
+  cursor:pointer;margin-bottom:2px;transition:background .12s}
+.ri:active{background:var(--bg2)}
+.ri.on{background:linear-gradient(135deg,rgba(69,117,232,.1),rgba(124,86,245,.07));box-shadow:var(--shsm)}
+.ra{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-size:18px;font-weight:800;color:#fff;
+  box-shadow:var(--shsm);position:relative;overflow:hidden}
+.ra img{width:100%;height:100%;object-fit:cover}
+.od{position:absolute;bottom:1px;right:1px;width:10px;height:10px;
+  border-radius:50%;background:var(--grn);border:2px solid var(--w)}
+.ri-inf{flex:1;min-width:0}
+.rn{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rl2{font-size:11px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ub{background:var(--a);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;
+  border-radius:9px;padding:0 3px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ── CHAT ── */
+.cp{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--surf);
+  transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);z-index:10}
+.cp.open{transform:translateX(0)}
+.ch{padding:10px 12px;border-bottom:1.5px solid var(--bdr);display:flex;align-items:center;
+  gap:9px;background:var(--w);flex-shrink:0;box-shadow:0 3px 0 var(--bdr)}
+.bk{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--bdr);background:var(--bg2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;
+  box-shadow:var(--shsm);flex-shrink:0}
+.ct{font-size:14px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs{font-size:11px;color:var(--tx2);margin-top:1px}
+.ms{flex:1;overflow-y:auto;padding:12px 12px 4px;display:flex;flex-direction:column;gap:10px}
+.mg{display:flex;gap:7px;align-items:flex-end}
+.mg.me{flex-direction:row-reverse}
+.ma{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:var(--shsm);overflow:hidden}
+.ma img{width:100%;height:100%;object-fit:cover}
+.mc{max-width:74%;display:flex;flex-direction:column;gap:2px}
+.mg.me .mc{align-items:flex-end}
+.msr{font-size:11px;font-weight:700;margin-bottom:1px;display:flex;align-items:center;gap:4px}
+.tc-red{color:#e8414a}
+.tc-rgb{background:linear-gradient(90deg,#e83a3a,#f07020,#e8c020,#20c870,#3a6ae8,#9820e8);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tc-gold{color:#f0a820}
+.tc-darkgold{color:#92400e}
+.tc-purple{color:#a048f0}
+.tc-white{color:var(--tx2)}
+.tc-default{color:var(--tx)}
+.mb{padding:9px 13px;border-radius:14px;font-size:14px;line-height:1.5;word-break:break-word;
+  background:var(--w);border:1.5px solid var(--bdr);box-shadow:var(--shsm);
+  cursor:pointer;-webkit-user-select:none;user-select:none}
+.mg.me .mb{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;
+  border-color:transparent;box-shadow:0 3px 0 #2e5ccc}
+.mb.recalled{opacity:.55;font-style:italic;cursor:default}
+.mt{font-size:10px;color:var(--tx3);padding:0 3px}
+.typ{min-height:20px;padding:2px 14px;display:flex;align-items:center;
+  gap:5px;font-size:12px;color:var(--tx3);flex-shrink:0}
+.td{width:5px;height:5px;border-radius:50%;background:var(--tx3);animation:tdot 1.2s infinite}
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.inb{padding:9px 11px;border-top:1.5px solid var(--bdr);background:var(--w);
+  display:flex;gap:8px;align-items:flex-end;flex-shrink:0;box-shadow:0 -3px 0 var(--bdr)}
+.inb textarea{flex:1;padding:10px 13px;border:1.5px solid var(--bdr);border-radius:22px;
+  font-size:14px;color:var(--tx);background:var(--bg2);outline:none;resize:none;
+  box-shadow:var(--shin);max-height:88px;transition:border-color .2s;line-height:1.4}
+.inb textarea:focus{border-color:var(--a)}
+.sb2{width:44px;height:44px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--a),var(--a2));border:none;color:#fff;font-size:18px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 0 #2e5ccc,var(--shsm)}
+.sb2:active{transform:translateY(2px);box-shadow:0 1px 0 #2e5ccc}
+
+/* ── CONTEXT MENU ── */
+#ctx{position:fixed;z-index:9500;background:var(--w);border:1.5px solid var(--bdr);
+  border-radius:var(--r);box-shadow:var(--sh);min-width:165px;display:none;
+  animation:ci .15s ease;overflow:hidden}
+#ctx.on{display:block}
+@keyframes ci{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.ci{padding:12px 16px;font-size:14px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;transition:background .1s;border:none;background:none;width:100%;text-align:left}
+.ci:hover,.ci:active{background:var(--bg2)}
+.ci+.ci{border-top:1px solid var(--bdr)}
+.ci.red{color:var(--red)}
+
+/* ── PANELS ── */
+.pn{position:absolute;inset:0;display:none;flex-direction:column;
+  overflow-y:auto;padding:18px 14px;gap:14px;background:var(--bg)}
+.pn.on{display:flex}
+.pn h2{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.pn h2.red{color:var(--red)}
+.pc{background:var(--w);border-radius:18px;padding:20px;border:1.5px solid var(--bdr);box-shadow:var(--sh)}
+.pc h3{font-size:12px;font-weight:700;color:var(--a);margin-bottom:14px;
+  text-transform:uppercase;letter-spacing:.4px}
+.au{display:flex;flex-direction:column;align-items:center;gap:11px;margin-bottom:14px}
+.alg{width:86px;height:86px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--a2));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:800;
+  box-shadow:var(--sh);overflow:hidden;cursor:pointer;border:3px solid var(--w);position:relative}
+.alg img{width:100%;height:100%;object-fit:cover}
+.alg:active::after{content:'📷';position:absolute;inset:0;background:rgba(0,0,0,.4);
+  display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:50%}
+.an{font-size:16px;font-weight:700}.ae{font-size:12px;color:var(--tx2);margin-top:2px}
+.nto{display:flex;gap:7px;flex-wrap:wrap}
+.nop{padding:6px 13px;border-radius:20px;border:2px solid var(--bdr);cursor:pointer;
+  font-size:12px;font-weight:700;background:var(--bg2);box-shadow:var(--shsm);transition:all .15s}
+.nop.on{border-color:var(--a);background:var(--w)}
+.bdg{width:100%;padding:11px;margin-top:10px;background:var(--bg2);border:1.5px solid var(--bdr);
+  border-radius:var(--rsm);font-size:14px;font-weight:700;cursor:pointer;color:var(--red);box-shadow:var(--shsm)}
+.pe{font-size:13px;color:var(--red);margin-bottom:9px;display:none}
+.po{font-size:13px;color:var(--grn);margin-bottom:9px;display:none}
+.sr{display:flex;gap:8px}
+.sr input{flex:1;padding:11px 13px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  font-size:14px;background:var(--bg2);outline:none;box-shadow:var(--shin);transition:border-color .2s}
+.sr input:focus{border-color:var(--a)}
+.sb3{padding:11px 16px;background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;border:none;
+  border-radius:var(--rsm);font-size:13px;font-weight:700;cursor:pointer;
+  box-shadow:0 3px 0 #2e5ccc;white-space:nowrap}
+.sb3:active{transform:translateY(2px);box-shadow:0 1px 0 #2e5ccc}
+.cl{display:flex;flex-direction:column;gap:8px}
+.uc{background:var(--w);border-radius:var(--r);padding:12px 13px;
+  display:flex;align-items:center;gap:10px;border:1.5px solid var(--bdr);box-shadow:var(--shsm)}
+.uc .inf{flex:1;min-width:0}
+.uc .un{font-size:13px;font-weight:600}
+.uc .ue{font-size:11px;color:var(--tx2);margin-top:1px}
+.ba{padding:6px 12px;border:1.5px solid var(--a);border-radius:var(--rsm);background:transparent;
+  color:var(--a);font-size:12px;font-weight:700;cursor:pointer;box-shadow:var(--shsm);white-space:nowrap}
+.ba:active{background:var(--a);color:#fff}
+.br{padding:6px 12px;border:1.5px solid var(--red);border-radius:var(--rsm);background:transparent;
+  color:var(--red);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.br:active{background:var(--red);color:#fff}
+.bg2{padding:6px 12px;border:1.5px solid var(--grn);border-radius:var(--rsm);background:transparent;
+  color:var(--grn);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.bg2:active{background:var(--grn);color:#fff}
+.gf{background:var(--w);border-radius:var(--r);padding:18px;border:1.5px solid var(--bdr);
+  box-shadow:var(--sh);display:flex;flex-direction:column;gap:12px}
+.gf h3{font-size:13px;font-weight:700;color:var(--a)}
+.gf input{width:100%;padding:10px 12px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  font-size:14px;background:var(--bg2);outline:none;box-shadow:var(--shin);transition:border-color .2s}
+.gf input:focus{border-color:var(--a)}
+.fr{display:flex;gap:7px}
+.tl{display:flex;flex-wrap:wrap;gap:5px;min-height:28px}
+.mtg{background:var(--bg2);border:1.5px solid var(--bdr);border-radius:20px;padding:4px 10px;
+  font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;box-shadow:var(--shsm)}
+.mtg button{border:none;background:none;cursor:pointer;color:var(--red);font-size:13px;padding:0}
+/* friends sections */
+.stl{font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;
+  padding:6px 0 8px;display:flex;align-items:center;gap:6px}
+.rqc{background:var(--w);border-radius:var(--r);padding:12px 13px;display:flex;align-items:center;
+  gap:10px;border:1.5px solid var(--a);box-shadow:var(--shsm);margin-bottom:8px}
+.sgc{background:var(--w);border-radius:var(--r);padding:12px 13px;display:flex;align-items:center;
+  gap:10px;border:1.5px solid var(--bdr);box-shadow:var(--shsm);margin-bottom:8px}
+.mtt{font-size:10px;color:var(--tx3);margin-top:2px}
+/* admin item */
+.ai{background:var(--w);border-radius:var(--r);padding:12px 13px;display:flex;align-items:center;
+  gap:9px;flex-wrap:wrap;border:1.5px solid var(--bdr);box-shadow:var(--shsm)}
+.ail{flex:1;min-width:110px}
+.ain{font-size:13px;font-weight:600}.aie{font-size:11px;color:var(--tx2)}
+.ras{display:flex;gap:5px;flex-wrap:wrap}
+.rbt{padding:5px 10px;border-radius:20px;border:1.5px solid var(--bdr);background:var(--bg2);
+  font-size:11px;font-weight:700;cursor:pointer;box-shadow:var(--shsm)}
+.rbt.rm:active{background:#f5f3ff;border-color:var(--pur);color:var(--pur)}
+.rbt.rv:active{background:#fffbeb;border-color:var(--gold);color:var(--gold)}
+.rbt.ra2:active{background:#fef2f2;border-color:var(--red);color:var(--red)}
+.rbt.rg:active{background:var(--bg2);color:var(--tx2)}
+.rbt.del{border-color:var(--red);color:var(--red)}
+.rbt.del:active{background:var(--red);color:#fff}
+.emp{color:var(--tx3);text-align:center;padding:28px 12px;font-size:13px}
+
+/* ── BOTTOM NAV ── */
+.bn{height:var(--bn);flex-shrink:0;background:var(--w);border-top:1.5px solid var(--bdr);
+  display:flex;box-shadow:0 -3px 0 var(--bdr);z-index:200}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;border:none;background:transparent;cursor:pointer;color:var(--tx3);
+  font-size:10px;font-weight:600;transition:color .2s;position:relative}
+.nb .ni{font-size:20px;line-height:1}
+.nb.on{color:var(--a)}
+.nb .nbb{position:absolute;top:5px;right:calc(50% - 14px);background:var(--red);color:#fff;
+  font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;padding:0 2px;
+  display:flex;align-items:center;justify-content:center}
+
+/* ── MODALS ── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.38);display:none;
+  align-items:flex-end;justify-content:center;z-index:5000;backdrop-filter:blur(3px)}
+.ov.on{display:flex}
+.mo{background:var(--w);border-radius:22px 22px 0 0;padding:26px 20px 30px;width:100%;
+  max-width:480px;border:1.5px solid var(--bdr);box-shadow:0 -6px 20px rgba(0,0,0,.15);position:relative}
+.mo::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--a),var(--a2));border-radius:22px 22px 0 0}
+.mo h3{font-size:16px;font-weight:800;margin-bottom:18px}
+.mc2{position:absolute;top:13px;right:13px;width:28px;height:28px;border-radius:50%;
+  border:1.5px solid var(--bdr);background:var(--bg2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:var(--shsm)}
+
+/* ── TOAST ── */
+#T{position:fixed;bottom:calc(var(--bn) + 10px);right:12px;width:280px;background:var(--w);
+  border:1.5px solid var(--a);border-radius:var(--r);box-shadow:var(--sh);padding:12px 13px;
+  display:none;z-index:6000;animation:sup .3s ease;transition:width .3s}
+#T.sm{width:160px;cursor:pointer}
+#T.on{display:block}
+@keyframes sup{from{transform:translateY(70px);opacity:0}to{transform:translateY(0);opacity:1}}
+.tt{font-size:11px;font-weight:700;color:var(--a);margin-bottom:3px;text-transform:uppercase}
+.tb2{font-size:13px}
+.ta{display:flex;gap:7px;margin-top:9px}
+.tbt{flex:1;padding:7px;border-radius:var(--rsm);border:1.5px solid;font-size:12px;font-weight:700;
+  cursor:pointer;background:transparent}
+.tok{border-color:var(--grn);color:var(--grn)}
+.tok:active{background:var(--grn);color:#fff}
+.tno{border-color:var(--red);color:var(--red)}
+.tno:active{background:var(--red);color:#fff}
+
+/* ── IN-APP NOTIF ── */
+#NB{position:fixed;top:calc(var(--tb) + 8px);left:10px;right:10px;background:var(--w);
+  border:1.5px solid var(--a);border-radius:var(--r);box-shadow:var(--sh);
+  padding:10px 13px;display:none;z-index:7000;animation:sup .3s ease;cursor:pointer;
+  gap:10px;align-items:flex-start}
+#NB.on{display:flex}
+.nt{font-size:12px;font-weight:700;color:var(--a)}
+.nb2{font-size:13px;margin-top:1px}
+
+/* ── NOTIF PROMPT ── */
+#NP{position:fixed;bottom:calc(var(--bn) + 10px);left:12px;right:12px;background:var(--w);
+  border:1.5px solid var(--a);border-radius:var(--r);box-shadow:var(--sh);
+  padding:14px 16px;z-index:6500;display:none;animation:sup .4s ease}
+#NP.on{display:block}
+.npr{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.npi{font-size:28px;flex-shrink:0}
+.npt{font-size:13px;font-weight:700;margin-bottom:2px}
+.nps{font-size:12px;color:var(--tx2)}
+.npb{display:flex;gap:8px}
+.npa{flex:1;padding:9px;border:none;border-radius:var(--rsm);
+  background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;font-size:13px;font-weight:700;
+  cursor:pointer;box-shadow:0 3px 0 #2e5ccc}
+.npk{padding:9px 14px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  background:var(--bg2);font-size:13px;font-weight:600;cursor:pointer;color:var(--tx2)}
+
+/* ── DESKTOP ── */
+@media(min-width:640px){
+  .bn{display:none}
+  .dts{display:flex}
+  .tb{padding:0 18px}
+  #HV{position:absolute;inset:0}
+  .sb{width:280px;flex-shrink:0;border-right:1.5px solid var(--bdr);
+    transform:none!important;position:relative}
+  .cp{position:relative;flex:1;transform:none!important;display:flex;flex-direction:column}
+  .pn{position:absolute;inset:0;padding:22px}
+  .ov{align-items:center}
+  .mo{border-radius:20px;max-width:400px}
+  #T,#NP{bottom:18px}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="A">
+  <div class="ac">
+    <div class="alo">
+      <div class="aico">💬</div>
+      <h1>Nexus <span>Chat</span></h1>
+      <p>Kết nối · Chia sẻ · Không giới hạn</p>
+    </div>
+    <div class="ats">
+      <button class="at on" onclick="aTab('l')">Đăng nhập</button>
+      <button class="at"    onclick="aTab('r')">Đăng ký</button>
+    </div>
+    <div id="AM" class="am e"></div>
+    <div id="FL">
+      <div class="fg"><label>Email</label>
+        <input id="lem" type="email" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="fg"><label>Mật khẩu</label>
+        <input id="lpw" type="password" placeholder="••••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="bp" onclick="doLogin()">Đăng nhập →</button>
+    </div>
+    <div id="FR" style="display:none">
+      <div class="fg"><label>Tên hiển thị</label><input id="rnm" type="text" placeholder="Tên của bạn"/></div>
+      <div class="fg"><label>Email</label><input id="rem" type="email" placeholder="your@email.com"/></div>
+      <div class="fg"><label>Mật khẩu (≥6 ký tự)</label>
+        <input id="rpw" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doReg()"/>
+      </div>
+      <button class="bp" onclick="doReg()">Tạo tài khoản →</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="P">
+  <div class="tb">
+    <div class="tbl">💬 Nexus <span>Chat</span></div>
+    <div class="dts" id="DTS">
+      <button class="dt on" data-t="home"    onclick="goTab('home')">🏠 Home</button>
+      <button class="dt"    data-t="profile" onclick="goTab('profile')">👤 Tài khoản</button>
+      <button class="dt"    data-t="friends" onclick="goTab('friends')">
+        🔍 Kết bạn<span id="frbd" style="display:none;background:var(--red);color:#fff;font-size:9px;min-width:14px;height:14px;border-radius:7px;padding:0 3px;display:none;align-items:center;justify-content:center;margin-left:4px"></span>
+      </button>
+      <button class="dt"    data-t="group"   onclick="goTab('group')">👥 Nhóm</button>
+      <button class="dt hi" data-t="admin"   onclick="goTab('admin')" id="dtadm" style="color:var(--red)">🛡️ Admin</button>
+    </div>
+    <div class="tbr">
+      <span id="TRL" class="rb rb-guest">Khách</span>
+      <div class="av" id="TAV" onclick="goTab('profile')">?</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- HOME -->
+    <div id="HV">
+      <div class="sb" id="SB">
+        <div class="sbh">
+          <h3>💬 Tin nhắn</h3>
+          <button class="ib" onclick="goTab('group')">＋</button>
+        </div>
+        <div class="sbs">
+          <span class="si">🔍</span>
+          <input id="RQ" placeholder="Tìm cuộc trò chuyện…" oninput="renderRooms()"/>
+        </div>
+        <div class="rl" id="RL"></div>
+      </div>
+      <div class="cp" id="CP">
+        <div class="ch">
+          <button class="bk" onclick="closeChat()">←</button>
+          <div class="ra" id="CVA" style="background:linear-gradient(135deg,var(--a),var(--a2));width:36px;height:36px;font-size:14px;flex-shrink:0">💬</div>
+          <div style="flex:1;min-width:0">
+            <div class="ct" id="CVN">Chọn cuộc trò chuyện</div>
+            <div class="cs" id="CVS">—</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="ib" onclick="openInvMo()">➕</button>
+          </div>
+        </div>
+        <div class="ms" id="MS">
+          <div class="emp" id="ME"><div style="font-size:46px">💬</div><p>Bắt đầu cuộc trò chuyện!</p></div>
+        </div>
+        <div class="typ" id="TYP"></div>
+        <div class="inb">
+          <textarea id="CI" rows="1" placeholder="Nhập tin nhắn…"
+            onkeydown="onKey(event)" oninput="onInp()"></textarea>
+          <button class="sb2" onclick="sendMsg()">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="pn" id="pn-profile">
+      <h2>👤 Tài khoản</h2>
+      <div class="pc">
+        <h3>Thông tin</h3>
+        <div class="au">
+          <div class="alg" id="PAVA" onclick="document.getElementById('AVF').click()">
+            <span id="PAL">?</span>
+          </div>
+          <input type="file" id="AVF" accept="image/*" style="display:none" onchange="uploadAva(this)"/>
+          <div style="text-align:center">
+            <div class="an" id="PN">—</div>
+            <div class="ae" id="PE">—</div>
+          </div>
+        </div>
+        <div id="NTS" style="display:none;margin-bottom:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">Màu tên trong chat</div>
+          <div class="nto" id="NTO"></div>
+        </div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bdr)">
+          <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">🔔 Thông báo</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span id="NST" style="font-size:13px;color:var(--tx2)">Đang kiểm tra…</span>
+            <button id="NTB" onclick="grantNotif()" style="padding:7px 14px;border-radius:var(--rsm);border:1.5px solid var(--a);background:transparent;color:var(--a);font-size:12px;font-weight:700;cursor:pointer;box-shadow:var(--shsm);display:none">Bật</button>
+          </div>
+        </div>
+      </div>
+      <div class="pc">
+        <h3>🔒 Đổi mật khẩu</h3>
+        <div class="fg"><label>Mật khẩu hiện tại</label>    <input type="password" id="PWO" placeholder="••••••••"/></div>
+        <div class="fg"><label>Mật khẩu mới</label>         <input type="password" id="PWN" placeholder="••••••••"/></div>
+        <div class="fg"><label>Xác nhận mật khẩu mới</label><input type="password" id="PWC" placeholder="••••••••"/></div>
+        <div class="pe" id="PWE"></div>
+        <div class="po" id="PWO2"></div>
+        <button class="bp" onclick="changePw()">Xác nhận →</button>
+        <button class="bdg" onclick="logout()">Đăng xuất</button>
+      </div>
+    </div>
+
+    <!-- FRIENDS -->
+    <div class="pn" id="pn-friends">
+      <h2>🔍 Kết bạn</h2>
+      <div class="sr">
+        <input id="FQ" type="text" placeholder="Tìm theo tên hoặc email…"
+               onkeydown="if(event.key==='Enter')searchF()"/>
+        <button class="sb3" onclick="searchF()">Tìm</button>
+      </div>
+      <div class="cl" id="FL2"><div class="emp">Nhập tên hoặc email để tìm</div></div>
+
+      <div>
+        <div class="stl">📩 Lời mời kết bạn <span id="FRC" class="ub" style="display:none"></span></div>
+        <div id="FRL"><div class="emp" style="padding:8px">Không có lời mời</div></div>
+      </div>
+
+      <div>
+        <div class="stl">👥 Gợi ý kết bạn</div>
+        <div id="SUG"><div class="emp" style="padding:8px">Không có gợi ý</div></div>
+      </div>
+
+      <div>
+        <div class="stl">✅ Bạn bè</div>
+        <div class="cl" id="MFL"><div class="emp" style="padding:8px">Chưa có bạn bè</div></div>
+      </div>
+    </div>
+
+    <!-- GROUP -->
+    <div class="pn" id="pn-group">
+      <h2>👥 Tạo nhóm</h2>
+      <div class="gf">
+        <h3>Nhóm mới</h3>
+        <div class="fg" style="margin:0"><label>Tên nhóm</label>
+          <input id="GN" placeholder="VD: Nhóm bạn bè"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tx2);display:block;margin-bottom:7px">Thêm thành viên</label>
+          <div class="fr">
+            <input id="GM" placeholder="Email thành viên…"/>
+            <button class="sb3" onclick="addMem()" style="padding:10px 14px">Thêm</button>
+          </div>
+          <div class="tl" id="GT" style="margin-top:9px"></div>
+        </div>
+        <button class="bp" onclick="createGroup()">Tạo nhóm →</button>
+      </div>
+      <div>
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:10px">Nhóm đã tham gia</h3>
+        <div class="cl" id="MGR"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="pn" id="pn-admin">
+      <h2 class="red">🛡️ Quản trị</h2>
+      <div class="sr">
+        <input id="AQ" placeholder="Tìm tài khoản hoặc nhóm…" oninput="filterA()"/>
+      </div>
+      <div class="stl">👤 Tài khoản</div>
+      <div class="cl" id="AL"><div class="emp">Đang tải…</div></div>
+      <div class="stl" style="margin-top:8px">👥 Nhóm</div>
+      <div class="cl" id="GL"><div class="emp">Đang tải…</div></div>
+    </div>
+  </div>
+
+  <nav class="bn">
+    <button class="nb on" data-t="home"    onclick="goTab('home')"><span class="ni">🏠</span><span>Home</span></button>
+    <button class="nb"    data-t="profile" onclick="goTab('profile')"><span class="ni">👤</span><span>Tài khoản</span></button>
+    <button class="nb"    data-t="friends" onclick="goTab('friends')">
+      <span class="ni">🔍</span><span>Kết bạn</span>
+      <span id="FRBB" class="nbb" style="display:none"></span>
+    </button>
+    <button class="nb"    data-t="group"   onclick="goTab('group')"><span class="ni">👥</span><span>Nhóm</span></button>
+    <button class="nb hi" data-t="admin"   onclick="goTab('admin')" id="BNA"><span class="ni">🛡️</span><span>Admin</span></button>
+  </nav>
+</div>
+
+<!-- MODAL invite -->
+<div class="ov" id="MI">
+  <div class="mo">
+    <button class="mc2" onclick="closeModal('MI')">✕</button>
+    <h3>➕ Mời thành viên</h3>
+    <div class="fg"><label>Email người dùng</label>
+      <input type="email" id="IE" placeholder="user@email.com"/>
+    </div>
+    <button class="bp" onclick="sendInv()">Gửi lời mời →</button>
+  </div>
+</div>
+
+<!-- Context menu -->
+<div id="ctx">
+  <button class="ci" id="ctxCopy"   onclick="doCopy()">📋 Sao chép</button>
+  <button class="ci" id="ctxRecall" onclick="doRecall()">↩️ Thu hồi</button>
+  <button class="ci red" id="ctxDel" onclick="doDel()">🗑️ Xóa (phía tôi)</button>
+</div>
+
+<!-- Toast invite -->
+<div id="T">
+  <div class="tt">📩 Lời mời</div>
+  <div class="tb2" id="TBD">Bạn được mời</div>
+  <div class="ta" id="TAC">
+    <button class="tbt tok" onclick="replyInv(true)">✓ Đồng ý</button>
+    <button class="tbt tno" onclick="replyInv(false)">✕ Từ chối</button>
+  </div>
+</div>
+
+<!-- In-app notif banner -->
+<div id="NB" onclick="onNBClick()">
+  <span style="font-size:22px;flex-shrink:0">💬</span>
+  <div style="flex:1;min-width:0">
+    <div class="nt" id="NBT"></div>
+    <div class="nb2" id="NBB"></div>
+  </div>
+  <span style="font-size:16px;flex-shrink:0;color:var(--tx3)">✕</span>
+</div>
+
+<!-- Notif permission prompt -->
+<div id="NP">
+  <div class="npr">
+    <span class="npi">🔔</span>
+    <div>
+      <div class="npt">Bật thông báo tin nhắn</div>
+      <div class="nps">Nhận thông báo kể cả khi rời app</div>
+    </div>
+  </div>
+  <div class="npb">
+    <button class="npa" onclick="grantNotif()">🔔 Bật thông báo</button>
+    <button class="npk" onclick="dismissNP()">Bỏ qua</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const API = location.protocol!=='file:' ? location.origin : 'http://localhost:3000';
+
+// ── State ──
+let tok=localStorage.getItem('nx_tok'), me=null, sk=null;
+let curR=null, rooms=[], online=new Set();
+let gMems=[], pendInv=null, tTmr=null, nRoom=null;
+let admUsers=[], admGroups=[], curTab='home';
+let swReg=null, localDel=new Set();
+let ctxId=null, ctxMine=false, ctxTmr=null;
+let frCount=0;
+
+// ── API ──
+async function api(m,u,b,auth=true){
+  const h={'Content-Type':'application/json'};
+  if(auth&&tok) h['Authorization']='Bearer '+tok;
+  const r=await fetch(API+u,{method:m,headers:h,body:b?JSON.stringify(b):undefined});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||'Lỗi');
+  return d;
+}
+
+// ════════════════════════════════════
+// NOTIFICATIONS — Fixed
+// ════════════════════════════════════
+async function initSW(){
+  if(!('serviceWorker' in navigator)) return;
+  try{
+    swReg=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+    await navigator.serviceWorker.ready;
+    console.log('✅ SW ready');
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='OPEN_ROOM'&&e.data.roomId){window.focus();goTab('home');openRoom(e.data.roomId);}
+    });
+  }catch(e){console.warn('SW:',e.message);}
+}
+
+function updateNotifUI(){
+  if(!('Notification' in window)){$('NST').textContent='Trình duyệt không hỗ trợ';return;}
+  const p=Notification.permission;
+  $('NST').textContent=p==='granted'?'✅ Thông báo đã bật':p==='denied'?'🚫 Bị chặn (bật trong Settings Chrome)':'🔔 Chưa bật thông báo';
+  $('NST').style.color=p==='granted'?'var(--grn)':p==='denied'?'var(--red)':'var(--tx2)';
+  $('NTB').style.display=p==='default'?'block':'none';
+}
+function showNP(){
+  if(!('Notification' in window)||Notification.permission!=='default') return;
+  if(localStorage.getItem('np_dis')) return;
+  $('NP').classList.add('on');
+}
+function dismissNP(){$('NP').classList.remove('on');localStorage.setItem('np_dis','1');}
+async function grantNotif(){
+  $('NP').classList.remove('on');
+  const r=await Notification.requestPermission();
+  updateNotifUI();
+  if(r==='granted') fireNotif('💬 Nexus Chat','Thông báo đã được bật!',null);
+}
+
+// ★ FIXED: Use SW postMessage — most reliable on Android Chrome
+function fireNotif(title,body,roomId){
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  // Method 1: SW postMessage (works background + foreground on Android)
+  if(swReg && navigator.serviceWorker.controller){
+    navigator.serviceWorker.controller.postMessage({
+      type:'SHOW_NOTIF', title, body:body.substring(0,100),
+      roomId, icon: getIcon()
+    });
+    return;
+  }
+  // Method 2: registration.showNotification
+  if(swReg){
+    swReg.showNotification(title,{
+      body:body.substring(0,100), icon:getIcon(),
+      tag:roomId||'nexus', data:{roomId}, vibrate:[200,100,200], renotify:true
+    }).catch(()=>fallbackNotif(title,body,roomId));
+    return;
+  }
+  // Method 3: plain Notification
+  fallbackNotif(title,body,roomId);
+}
+function fallbackNotif(title,body,roomId){
+  try{
+    const n=new Notification(title,{body:body.substring(0,100),icon:getIcon(),tag:roomId||'nexus'});
+    n.onclick=()=>{window.focus();if(roomId){goTab('home');openRoom(roomId);}n.close();};
+    setTimeout(()=>n.close(),6000);
+  }catch(e){}
+}
+
+let _ico=null;
+function getIcon(){
+  if(_ico) return _ico;
+  try{
+    const c=document.createElement('canvas');c.width=c.height=192;
+    const ctx=c.getContext('2d');
+    const g=ctx.createLinearGradient(0,0,192,192);
+    g.addColorStop(0,'#4575e8');g.addColorStop(1,'#7c56f5');
+    ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(0,0,192,192,40);ctx.fill();
+    ctx.font='90px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('💬',96,100);
+    _ico=c.toDataURL();
+    c.toBlob(b=>{if(b&&'caches' in window)caches.open('nx-v1').then(ca=>ca.put('/nexus-icon.png',new Response(b,{headers:{'Content-Type':'image/png'}})));});
+  }catch(e){_ico='';}
+  return _ico;
+}
+
+function showNotif(from,body,roomId){
+  nRoom=roomId;
+  // In-app banner (always)
+  $('NBT').textContent=from;
+  $('NBB').textContent=body.substring(0,65);
+  $('NB').classList.add('on');
+  clearTimeout(window._nc);window._nc=setTimeout(()=>$('NB').classList.remove('on'),5000);
+  // System push (even when tab is visible — user may be on different tab/app)
+  fireNotif('💬 '+from, body, roomId);
+}
+function onNBClick(){$('NB').classList.remove('on');if(nRoom){goTab('home');openRoom(nRoom);}}
+
+// ── DOM helper ──
+function $(id){return document.getElementById(id);}
+const COLS=['#4575e8','#7c56f5','#f0a820','#e8414a','#20c86a','#e84898','#20b8e8'];
+function hsh(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h);}
+function rCol(s){return COLS[hsh(s)%COLS.length];}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── AUTH ──
+function aTab(t){
+  document.querySelectorAll('.at').forEach((b,i)=>b.classList.toggle('on',(i===0&&t==='l')||(i===1&&t==='r')));
+  $('FL').style.display=t==='l'?'block':'none';
+  $('FR').style.display=t==='r'?'block':'none';
+  setAM('');
+}
+function setAM(m,t='e'){const e=$('AM');e.textContent=m;e.className='am '+t;e.style.display=m?'block':'none';}
+async function doLogin(){
+  const em=$('lem').value.trim(),pw=$('lpw').value;
+  if(!em||!pw) return setAM('Vui lòng điền đầy đủ');
+  try{const d=await api('POST','/sign-in',{email:em,password:pw},false);tok=d.token;me=d.user;localStorage.setItem('nx_tok',tok);startApp();}
+  catch(e){setAM(e.message);}
+}
+async function doReg(){
+  const nm=$('rnm').value.trim(),em=$('rem').value.trim(),pw=$('rpw').value;
+  if(!nm||!em||!pw) return setAM('Vui lòng điền đầy đủ');
+  if(pw.length<6) return setAM('Mật khẩu ít nhất 6 ký tự');
+  try{await api('POST','/sign-up',{displayName:nm,email:em,password:pw},false);
+    setAM('✅ Tạo tài khoản thành công!','o');aTab('l');$('lem').value=em;}
+  catch(e){setAM(e.message);}
+}
+function logout(){localStorage.removeItem('nx_tok');if(sk)sk.disconnect();location.reload();}
+
+// ── START ──
+function startApp(){
+  $('A').style.display='none';
+  $('P').classList.add('on');
+  updateBar();
+  if(me.role==='admin'){$('dtadm').classList.remove('hi');$('BNA').classList.remove('hi');}
+  initNT();initSock();loadRooms();loadInvites();loadFReqs();loadFriends();loadSugs();
+  updateNotifUI();setTimeout(showNP,2500);getIcon();
+  const saved=localStorage.getItem('nd_'+me.email);
+  if(saved) localDel=new Set(JSON.parse(saved));
+}
+function updateBar(){
+  const ta=$('TAV');
+  if(me.avatar){ta.innerHTML=`<img src="${API}${me.avatar}"/>`;}else{ta.textContent=me.displayName[0].toUpperCase();}
+  const tr=$('TRL');
+  tr.textContent={admin:'👑 Admin',vip:'⭐ VIP',member:'💎 Hội viên',guest:'👤 Khách'}[me.role]||me.role;
+  tr.className='rb rb-'+me.role;
+  $('PN').textContent=me.displayName;
+  $('PE').textContent=me.email;
+  const pa=$('PAVA');
+  if(me.avatar){pa.innerHTML=`<img src="${API}${me.avatar}"/>`;}
+  else{$('PAL').textContent=me.displayName[0].toUpperCase();}
+}
+function initNT(){
+  const s=$('NTS');
+  if(me.role!=='admin'&&me.role!=='vip') return;
+  s.style.display='block';
+  const opts=me.role==='admin'?[['red','🔴 Đỏ'],['rgb','🌈 RGB']]:[['gold','🟡 Vàng kim'],['darkgold','🟤 Vàng đen']];
+  $('NTO').innerHTML=opts.map(([v,l])=>`<div class="nop ${me.nameTagColor===v?'on':''} tc-${v}" data-v="${v}" onclick="setNT('${v}')">${l}</div>`).join('');
+}
+async function setNT(c){
+  try{await api('PUT','/me/nametag',{nameTagColor:c});me.nameTagColor=c;
+    document.querySelectorAll('.nop').forEach(el=>el.classList.toggle('on',el.dataset.v===c));}
+  catch(e){alert(e.message);}
+}
+
+// ── SOCKET ──
+function initSock(){
+  sk=io(location.protocol!=='file:'?location.origin:API,{auth:{token:tok},transports:['websocket','polling'],reconnection:true});
+  sk.on('connect',()=>console.log('🔌',sk.id));
+  sk.on('connect_error',e=>console.warn(e.message));
+  sk.on('online',u=>{online=new Set(u);renderRooms();});
+  sk.on('new_msg',msg=>{
+    updateRL(msg);
+    if(msg.roomId===curR){
+      $('ME')?.remove();
+      if(!localDel.has(msg.id)) appendMsg(msg);
+      scrollBot();
+    } else {
+      const el=document.querySelector(`[data-room="${msg.roomId}"]`);
+      if(el){let b=el.querySelector('.ub');if(!b){b=document.createElement('div');b.className='ub';el.appendChild(b);}b.textContent=(parseInt(b.textContent||0)+1);}
+      if(msg.sender!==me.email) showNotif(msg.senderName,msg.content,msg.roomId);
+    }
+  });
+  sk.on('msg_recalled',({roomId,msgId})=>{
+    const el=document.getElementById('mb-'+msgId);
+    if(el){el.textContent='🚫 Tin nhắn đã được thu hồi';el.classList.add('recalled');}
+  });
+  sk.on('typing',({email:e,roomId})=>{
+    if(roomId===curR&&e!==me.email){
+      $('TYP').innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div><span style="font-size:12px;margin-left:4px">'+esc(e)+' đang nhập…</span>';
+      clearTimeout(window._tc);window._tc=setTimeout(()=>$('TYP').innerHTML='',2200);
+    }
+  });
+  sk.on('invite',inv=>{pendInv=inv;showToast(inv);});
+  sk.on('friend_request',req=>{updateFRBadge(1);showNotif(req.fromName,'Gửi lời mời kết bạn',null);if(curTab==='friends')loadFReqs();});
+  sk.on('friend_accepted',({byName})=>{showNotif(byName,'Đã chấp nhận lời mời kết bạn 🎉',null);loadFriends();});
+  sk.on('friend_removed',()=>loadFriends());
+  sk.on('user_deleted',({email})=>{if(email===me.email){alert('Tài khoản của bạn đã bị xóa bởi Admin');logout();}});
+  sk.on('group_deleted',({roomId})=>{
+    rooms=rooms.filter(r=>r.roomId!==roomId);renderRooms();renderMyG();
+    if(curR===roomId){curR=null;closeChat();}
+  });
+  sk.on('disconnect',()=>console.log('❌'));
+}
+
+// ── ROOMS ──
+async function loadRooms(){try{rooms=await api('GET','/rooms');renderRooms();renderMyG();}catch(e){console.error(e);}}
+function rDisp(r){return r.type==='group'?r.name:r.members.find(m=>m!==me.email)||'DM';}
+function renderRooms(){
+  const q=($('RQ')?.value||'').toLowerCase();
+  const el=$('RL');
+  const rows=rooms.filter(r=>!q||rDisp(r).toLowerCase().includes(q));
+  if(!rows.length){el.innerHTML='<div class="emp" style="padding:14px 8px">Không có cuộc trò chuyện</div>';return;}
+  el.innerHTML=rows.map(r=>{
+    const nm=rDisp(r),col=rCol(nm);
+    const other=r.members.find(m=>m!==me.email);
+    const isOn=r.type==='dm'&&other&&online.has(other);
+    return `<div class="ri ${curR===r.roomId?'on':''}" data-room="${r.roomId}" onclick="openRoom('${r.roomId}')">
+      <div class="ra" style="background:${col}">${nm[0].toUpperCase()}${isOn?'<div class="od"></div>':''}</div>
+      <div class="ri-inf">
+        <div class="rn">${esc(nm)}</div>
+        <div class="rl2" id="rl-${r.roomId}">${r.type==='group'?'👥 '+r.members.length+' thành viên':'Nhấn để nhắn tin'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function openRoom(roomId){
+  curR=roomId;
+  $('CP').classList.add('open');
+  $('SB').classList.add('aw');
+  document.querySelectorAll('.ri').forEach(el=>el.classList.toggle('on',el.dataset.room===roomId));
+  const r=rooms.find(x=>x.roomId===roomId);
+  const nm=r?rDisp(r):roomId;
+  $('CVN').textContent=nm;
+  $('CVS').textContent=r?(r.type==='group'?r.members.length+' thành viên':r.members.find(m=>m!==me.email)||''):'';
+  $('CVA').style.background=`linear-gradient(135deg,${rCol(nm)},${rCol(nm+'_')})`;
+  $('CVA').textContent=nm[0].toUpperCase();
+  const it=document.querySelector(`[data-room="${roomId}"]`);
+  if(it){const b=it.querySelector('.ub');if(b)b.remove();}
+  sk.emit('join_room',roomId);
+  await fetchMsgs(roomId);
+}
+function closeChat(){$('CP').classList.remove('open');$('SB').classList.remove('aw');}
+async function fetchMsgs(roomId){
+  const el=$('MS');
+  el.innerHTML='<div class="emp">Đang tải…</div>';
+  try{
+    const msgs=await api('GET',`/rooms/${roomId}/messages`);
+    el.innerHTML='';
+    const vis=msgs.filter(m=>!localDel.has(m.id));
+    if(!vis.length){el.innerHTML='<div class="emp"><div style="font-size:40px">💬</div><p>Bắt đầu cuộc trò chuyện!</p></div>';return;}
+    vis.forEach(appendMsg);scrollBot();
+  }catch{el.innerHTML='<div class="emp" style="color:var(--red)">Lỗi tải tin nhắn</div>';}
+}
+function appendMsg(msg){
+  const el=$('MS');
+  const isMe=msg.sender===me.email;
+  const time=new Date(msg.timestamp).toLocaleTimeString('vi',{hour:'2-digit',minute:'2-digit'});
+  const tc=ntCl(msg.senderRole,msg.nameTagColor);
+  const icon={admin:'👑',vip:'⭐',member:'💎',guest:''}[msg.senderRole]||'';
+  const col=COLS[hsh(msg.sender||'')%COLS.length];
+  const ava=msg.senderAvatar?`<img src="${API}${msg.senderAvatar}" onerror="this.outerHTML='${(msg.senderName||'?')[0].toUpperCase()}'"/>`:(msg.senderName||'?')[0].toUpperCase();
+  const rec=msg.recalled;
+  const d=document.createElement('div');
+  d.className='mg'+(isMe?' me':'');
+  d.dataset.mid=msg.id;
+  d.innerHTML=`<div class="ma" style="background:${col}">${ava}</div>
+    <div class="mc">
+      ${!isMe?`<div class="msr ${tc}">${icon} ${esc(msg.senderName||'')}</div>`:''}
+      <div class="mb${rec?' recalled':''}" id="mb-${msg.id}"
+        ontouchstart="tStart(event,'${msg.id}',${isMe})"
+        ontouchend="tEnd()"
+        oncontextmenu="showCtx(event,'${msg.id}',${isMe});return false"
+      >${rec?'🚫 Tin nhắn đã được thu hồi':esc(msg.content).replace(/\n/g,'<br>')}</div>
+      <div class="mt">${time}</div>
+    </div>`;
+  el.appendChild(d);
+}
+function ntCl(role,color){
+  if(role==='admin') return color==='rgb'?'tc-rgb':'tc-red';
+  if(role==='vip')   return color==='darkgold'?'tc-darkgold':'tc-gold';
+  if(role==='member') return 'tc-purple';
+  return 'tc-white';
+}
+function updateRL(msg){const el=document.getElementById('rl-'+msg.roomId);if(el)el.textContent=(msg.sender===me.email?'Bạn: ':'')+msg.content.substring(0,30);}
+function scrollBot(){const el=$('MS');requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});}
+
+// ── CONTEXT MENU ──
+function tStart(e,id,mine){ctxTmr=setTimeout(()=>showCtx(e,id,mine),500);}
+function tEnd(){clearTimeout(ctxTmr);}
+function showCtx(e,id,mine){
+  e.preventDefault&&e.preventDefault();
+  ctxId=id;ctxMine=mine;
+  $('ctxRecall').style.display=mine?'flex':'none';
+  const x=e.touches?e.touches[0].clientX:e.clientX;
+  const y=e.touches?e.touches[0].clientY:e.clientY;
+  const m=$('ctx');
+  m.style.left=Math.min(x,window.innerWidth-175)+'px';
+  m.style.top=Math.min(y,window.innerHeight-130)+'px';
+  m.classList.add('on');
+  setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),80);
+}
+function closeCtx(){$('ctx').classList.remove('on');ctxId=null;}
+function doCopy(){
+  const el=document.getElementById('mb-'+ctxId);
+  if(el) navigator.clipboard?.writeText(el.innerText||el.textContent).catch(()=>{});
+  closeCtx();
+}
+function doRecall(){
+  if(!ctxId||!curR) return;
+  sk.emit('recall_msg',{roomId:curR,msgId:ctxId});
+  closeCtx();
+}
+function doDel(){
+  if(!ctxId) return;
+  localDel.add(ctxId);
+  localStorage.setItem('nd_'+me.email,JSON.stringify([...localDel]));
+  const bubble=document.getElementById('mb-'+ctxId);
+  if(bubble) bubble.closest('.mg')?.remove();
+  closeCtx();
+}
+
+// ── SEND ──
+function sendMsg(){
+  if(!curR) return;
+  const inp=$('CI'),txt=inp.value.trim();
+  if(!txt) return;
+  inp.value='';inp.style.height='';
+  sk.emit('send_message',{roomId:curR,content:txt});
+}
+function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+function onInp(){
+  const inp=$('CI');
+  inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,88)+'px';
+  if(curR) sk.emit('typing',{roomId:curR});
+}
+
+// ── TABS ──
+function goTab(t){
+  curTab=t;
+  document.querySelectorAll('.nb,.dt').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  $('HV').style.display=t==='home'?'flex':'none';
+  ['profile','friends','group','admin'].forEach(p=>{
+    const el=$('pn-'+p);if(el){el.style.display='none';el.classList.remove('on');}
+  });
+  if(t!=='home'){const pn=$('pn-'+t);if(pn){pn.style.display='flex';pn.classList.add('on');}}
+  if(t==='admin'){loadAdmUsers();loadAdmGroups();}
+  if(t==='group')  renderMyG();
+  if(t==='profile'){updateNotifUI();}
+  if(t==='friends'){loadFReqs();loadFriends();loadSugs();}
+  closeCtx();
+}
+
+// ── FRIENDS ──
+function updateFRBadge(delta){
+  frCount=Math.max(0,frCount+delta);
+  ['FRBB','frbd'].forEach(id=>{const el=$(id);if(el){el.textContent=frCount;el.style.display=frCount?'flex':'none';}});
+  const c=$('FRC');if(c){c.textContent=frCount;c.style.display=frCount?'flex':'none';}
+}
+async function loadFReqs(){
+  try{
+    const reqs=await api('GET','/friends/requests');
+    frCount=reqs.length;updateFRBadge(0);
+    const el=$('FRL');
+    if(!reqs.length){el.innerHTML='<div class="emp" style="padding:8px">Không có lời mời</div>';return;}
+    el.innerHTML=reqs.map(r=>`
+      <div class="rqc">
+        <div class="av" style="width:40px;height:40px;font-size:14px">${(r.fromName||'?')[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${esc(r.fromName||r.from)}</div>
+          <div style="font-size:11px;color:var(--tx2)">${esc(r.from)}</div>
+        </div>
+        <button class="bg2" onclick="respondFr('${r.from}',true)">✓</button>
+        <button class="br"  onclick="respondFr('${r.from}',false)">✕</button>
+      </div>`).join('');
+  }catch(e){console.error(e);}
+}
+async function respondFr(fromEmail,accept){
+  try{await api('POST','/friends/respond',{fromEmail,accept});updateFRBadge(-1);loadFReqs();if(accept)loadFriends();}
+  catch(e){alert(e.message);}
+}
+async function loadFriends(){
+  try{
+    const fr=await api('GET','/friends');
+    const el=$('MFL');
+    if(!fr.length){el.innerHTML='<div class="emp" style="padding:8px">Chưa có bạn bè</div>';return;}
+    el.innerHTML=fr.map(u=>`
+      <div class="uc">
+        <div class="av" style="width:40px;height:40px;font-size:14px">${u.displayName[0].toUpperCase()}</div>
+        <div class="inf"><div class="un">${esc(u.displayName)}</div><div class="ue">${esc(u.email)}</div></div>
+        <span class="rb rb-${u.role}">${u.role}</span>
+        <button class="ba" onclick="startDM('${u.email}')">💬</button>
+        <button class="br" onclick="rmFriend('${u.email}')">✕</button>
+      </div>`).join('');
+  }catch(e){console.error(e);}
+}
+async function rmFriend(email){
+  if(!confirm('Xóa bạn bè với '+email+'?')) return;
+  try{await api('DELETE',`/friends/${email}`);loadFriends();loadSugs();}
+  catch(e){alert(e.message);}
+}
+async function loadSugs(){
+  try{
+    const sugs=await api('GET','/friends/suggestions');
+    const el=$('SUG');
+    if(!sugs.length){el.innerHTML='<div class="emp" style="padding:8px">Không có gợi ý</div>';return;}
+    el.innerHTML=sugs.map(u=>`
+      <div class="sgc">
+        <div class="av" style="width:40px;height:40px;font-size:14px">${u.displayName[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${esc(u.displayName)}</div>
+          <div class="mtt">👥 Bạn với ${esc(u.mutualFriend)}</div>
+        </div>
+        ${u.alreadySent?'<span style="font-size:12px;color:var(--tx3)">Đã gửi</span>'
+          :`<button class="ba" onclick="sendFReq('${u.email}',this)">+ Kết bạn</button>`}
+      </div>`).join('');
+  }catch(e){console.error(e);}
+}
+async function searchF(){
+  const q=$('FQ').value.trim();
+  const el=$('FL2');
+  el.innerHTML='<div class="emp">Đang tìm…</div>';
+  try{
+    const users=await api('GET',`/users?q=${encodeURIComponent(q)}`);
+    if(!users.length){el.innerHTML='<div class="emp">Không tìm thấy</div>';return;}
+    el.innerHTML=users.map(u=>{
+      let btns='';
+      if(me.role==='admin'){
+        btns=`<button class="ba" onclick="startDM('${u.email}')">💬 Chat</button>`;
+      } else if(u.isFriend){
+        btns=`<button class="ba" onclick="startDM('${u.email}')">💬</button>
+              <button class="br" onclick="rmFriend('${u.email}')">✕ Xóa bạn</button>`;
+      } else if(u.sentRequest){
+        btns=`<span style="font-size:11px;color:var(--tx3)">Đã gửi</span>`;
+      } else if(u.incomingRequest){
+        btns=`<button class="bg2" onclick="respondFr('${u.email}',true)">✓ Chấp nhận</button>`;
+      } else {
+        btns=`<button class="ba" onclick="sendFReq('${u.email}',this)">+ Kết bạn</button>`;
+      }
+      return `<div class="uc">
+        <div class="av" style="width:40px;height:40px;font-size:14px">${u.displayName[0].toUpperCase()}</div>
+        <div class="inf"><div class="un">${esc(u.displayName)}</div><div class="ue">${esc(u.email)}</div></div>
+        <span class="rb rb-${u.role}">${u.role}</span>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">${btns}</div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML=`<div class="emp" style="color:var(--red)">${e.message}</div>`;}
+}
+async function sendFReq(email,btn){
+  try{await api('POST','/friends/request',{targetEmail:email});
+    if(btn){btn.textContent='Đã gửi';btn.disabled=true;btn.style.opacity='.6';}}
+  catch(e){alert(e.message);}
+}
+async function startDM(em){
+  try{
+    const room=await api('POST','/dm',{targetEmail:em});
+    if(!rooms.find(r=>r.roomId===room.roomId)) rooms.push(room);
+    goTab('home');renderRooms();openRoom(room.roomId);
+  }catch(e){alert(e.message);}
+}
+
+// ── GROUP ──
+function addMem(){const inp=$('GM'),v=inp.value.trim();if(!v||gMems.includes(v))return;gMems.push(v);inp.value='';renderGT();}
+function rmMem(e){gMems=gMems.filter(x=>x!==e);renderGT();}
+function renderGT(){$('GT').innerHTML=gMems.map(e=>`<div class="mtg">${esc(e)}<button onclick="rmMem('${e}')">✕</button></div>`).join('');}
+async function createGroup(){
+  const nm=$('GN').value.trim();if(!nm){alert('Nhập tên nhóm');return;}
+  try{const r=await api('POST','/rooms',{name:nm,members:gMems});rooms.push(r);gMems=[];$('GN').value='';renderGT();renderRooms();renderMyG();alert('✅ Đã tạo nhóm "'+nm+'"!');}
+  catch(e){alert(e.message);}
+}
+function renderMyG(){
+  const gs=rooms.filter(r=>r.type==='group');
+  const el=$('MGR');if(!el)return;
+  if(!gs.length){el.innerHTML='<div class="emp">Chưa có nhóm</div>';return;}
+  el.innerHTML=gs.map(g=>`
+    <div class="uc">
+      <div class="av" style="background:${rCol(g.name)};width:40px;height:40px;font-size:14px;color:#fff">${g.name[0]}</div>
+      <div class="inf"><div class="un">${esc(g.name)}</div><div class="ue">${g.members.length} thành viên</div></div>
+      <button class="ba" onclick="goTab('home');openRoom('${g.roomId}')">Vào</button>
+      ${g.creator===me.email||me.role==='admin'?`<button class="br" onclick="delGroup('${g.roomId}')">🗑️</button>`:''}
+    </div>`).join('');
+}
+async function delGroup(roomId){
+  if(!confirm('Xóa nhóm này?')) return;
+  try{await api('DELETE',`/rooms/${roomId}`);rooms=rooms.filter(r=>r.roomId!==roomId);renderRooms();renderMyG();}
+  catch(e){alert(e.message);}
+}
+
+// ── ADMIN ──
+async function loadAdmUsers(){try{admUsers=await api('GET','/users?q=');renderAdmU(admUsers);}catch(e){console.error(e);}}
+async function loadAdmGroups(){
+  try{
+    const gs=await api('GET','/admin/groups');
+    admGroups=gs;renderAdmG(gs);
+  }catch(e){$('GL').innerHTML='<div class="emp">Lỗi tải nhóm</div>';}
+}
+function filterA(){
+  const q=$('AQ').value.toLowerCase();
+  renderAdmU(admUsers.filter(u=>u.displayName.toLowerCase().includes(q)||u.email.toLowerCase().includes(q)));
+  renderAdmG(admGroups.filter(g=>g.name.toLowerCase().includes(q)||g.creator.toLowerCase().includes(q)));
+}
+function renderAdmU(users){
+  const el=$('AL');
+  if(!users.length){el.innerHTML='<div class="emp">Không tìm thấy</div>';return;}
+  el.innerHTML=users.map(u=>`
+    <div class="ai">
+      <div class="av">${u.displayName[0].toUpperCase()}</div>
+      <div class="ail"><div class="ain">${esc(u.displayName)}</div><div class="aie">${esc(u.email)}</div></div>
+      <span class="rb rb-${u.role}">${u.role}</span>
+      <div class="ras">
+        <button class="rbt rm"  onclick="setRole('${u.email}','member')">Hội viên</button>
+        <button class="rbt rv"  onclick="setRole('${u.email}','vip')">VIP</button>
+        <button class="rbt ra2" onclick="setRole('${u.email}','admin')">Admin</button>
+        <button class="rbt rg"  onclick="setRole('${u.email}','guest')">Guest</button>
+        <button class="rbt del" onclick="admDelUser('${u.email}')">🗑️ Xóa TK</button>
+      </div>
+    </div>`).join('');
+}
+function renderAdmG(groups){
+  const el=$('GL');
+  if(!groups.length){el.innerHTML='<div class="emp">Không có nhóm</div>';return;}
+  el.innerHTML=groups.map(g=>`
+    <div class="ai">
+      <div class="av" style="background:${rCol(g.name)};color:#fff">${g.name[0]}</div>
+      <div class="ail">
+        <div class="ain">${esc(g.name)}</div>
+        <div class="aie">${g.members.length} thành viên · ${esc(g.creator)}</div>
+      </div>
+      <button class="rbt del" onclick="admDelGroup('${g.roomId}')">🗑️ Xóa nhóm</button>
+    </div>`).join('');
+}
+async function setRole(em,role){try{await api('PUT','/admin/set-role',{email:em,role});loadAdmUsers();}catch(e){alert(e.message);}}
+async function admDelUser(email){
+  if(!confirm(`Xóa tài khoản ${email}?\nKhông thể hoàn tác!`)) return;
+  try{await api('DELETE',`/admin/user/${email}`);loadAdmUsers();}catch(e){alert(e.message);}
+}
+async function admDelGroup(roomId){
+  if(!confirm('Xóa nhóm này?')) return;
+  try{await api('DELETE',`/admin/group/${roomId}`);loadAdmGroups();}catch(e){alert(e.message);}
+}
+
+// ── PROFILE ──
+async function uploadAva(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async e=>{try{const d=await api('PUT','/me/avatar',{avatarBase64:e.target.result});me.avatar=d.avatar;updateBar();}catch(err){alert(err.message);}};
+  r.readAsDataURL(f);
+}
+async function changePw(){
+  const old=$('PWO').value,nw=$('PWN').value,cf=$('PWC').value;
+  const pe=$('PWE'),po=$('PWO2');pe.style.display=po.style.display='none';
+  if(!old||!nw||!cf){pe.textContent='Điền đầy đủ';pe.style.display='block';return;}
+  if(nw.length<6){pe.textContent='Mật khẩu mới ≥6 ký tự';pe.style.display='block';return;}
+  if(nw!==cf){pe.textContent='Mật khẩu không khớp';pe.style.display='block';return;}
+  try{await api('PUT','/me/password',{oldPassword:old,newPassword:nw});
+    po.textContent='✅ Đổi thành công!';po.style.display='block';
+    ['PWO','PWN','PWC'].forEach(id=>$(id).value='');}
+  catch(e){pe.textContent=e.message;pe.style.display='block';}
+}
+
+// ── INVITE ──
+function closeModal(id){$(id).classList.remove('on');}
+async function loadInvites(){try{const is=await api('GET','/invites');if(is.length){pendInv=is[0];showToast(is[0]);}}catch{}}
+function showToast(inv){
+  const t=$('T');
+  $('TBD').textContent=`${inv.fromName||inv.from} mời vào: "${inv.roomName||inv.roomId}"`;
+  $('TAC').style.display='flex';t.classList.remove('sm');t.classList.add('on');t.style.display='block';t.onclick=null;
+  clearTimeout(tTmr);
+  tTmr=setTimeout(()=>{
+    t.classList.add('sm');$('TAC').style.display='none';$('TBD').textContent='📩 Nhấn để xem';
+    t.onclick=()=>{if(pendInv)showToast(pendInv);};
+  },5000);
+}
+async function replyInv(accept){
+  if(!pendInv) return;
+  try{await api('POST','/invites/respond',{roomId:pendInv.roomId,accept});
+    if(accept){await loadRooms();goTab('home');}
+    $('T').classList.remove('on');$('T').style.display='none';pendInv=null;}
+  catch(e){alert(e.message);}
+}
+function openInvMo(){if(!curR)return;$('MI').classList.add('on');$('IE').value='';}
+async function sendInv(){
+  const em=$('IE').value.trim();if(!em||!curR)return;
+  try{await api('POST',`/rooms/${curR}/invite`,{targetEmail:em});closeModal('MI');alert('✅ Đã gửi lời mời!');}
+  catch(e){alert(e.message);}
+}
+
+// ── INIT ──
+$('HV').style.display='flex';
+['profile','friends','group','admin'].forEach(p=>{const el=$('pn-'+p);if(el)el.style.display='none';});
+initSW();
+(async()=>{
+  if(!tok)return;
+  try{me=await api('GET','/me');startApp();}
+  catch{localStorage.removeItem('nx_tok');}
+})();
+</script>
+</body>
+</html>
