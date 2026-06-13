@@ -96,29 +96,6 @@ window.io = function(url, opts) {
 };
 
 // ── 3. Web Push subscription ────────────────────────────────────
-async function setupWebPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (Notification.permission !== 'granted') return;
-  try {
-    const { publicKey } = await fetch('/vapid-key').then(r => r.json());
-    const reg = await navigator.serviceWorker.ready;
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
-    }
-    const tok = localStorage.getItem('nx_tok');
-    if (tok && sub) {
-      await fetch('/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-        body: JSON.stringify({ subscription: sub }),
-      });
-    }
-  } catch(e) { console.warn('Push setup:', e.message); }
-}
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -127,6 +104,114 @@ function urlBase64ToUint8Array(base64String) {
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
+}
+
+async function sendSubToServer(sub) {
+  const tok = localStorage.getItem('nx_tok');
+  if (!tok || !sub) return false;
+  const res = await fetch('/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+    body: JSON.stringify({ subscription: sub }),
+  });
+  if (res.status === 410) {
+    // Server nói subscription hết hạn → unsubscribe và re-subscribe
+    await sub.unsubscribe();
+    return null; // caller sẽ re-subscribe
+  }
+  return res.ok;
+}
+
+async function setupWebPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  try {
+    const { publicKey } = await fetch('/vapid-key').then(r => r.json());
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+
+    // Nếu có sub cũ, thử gửi lên server
+    if (sub) {
+      const ok = await sendSubToServer(sub);
+      if (ok === null) sub = null; // sub hết hạn, cần re-subscribe
+    }
+
+    // Chưa có sub hoặc sub cũ hết hạn → đăng ký mới
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+      await sendSubToServer(sub);
+    }
+
+    // Đăng ký Background Sync để gửi lại tin nhắn khi có mạng
+    if ('SyncManager' in window) {
+      try { await reg.sync.register('nexus-pending-messages'); } catch {}
+    }
+
+    // Đăng ký Periodic Sync để refresh subscription (Chrome only)
+    if ('periodicSync' in reg) {
+      try {
+        const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+        if (status.state === 'granted') {
+          await reg.periodicSync.register('nexus-push-refresh', { minInterval: 24 * 60 * 60 * 1000 });
+        }
+      } catch {}
+    }
+
+    // Lắng nghe message từ SW
+    navigator.serviceWorker.addEventListener('message', onSwMessage);
+
+    // Khi online trở lại → re-sync messages
+    window.addEventListener('online', onNetworkOnline);
+
+  } catch(e) { console.warn('Push setup:', e.message); }
+}
+
+function onNetworkOnline() {
+  const tok = localStorage.getItem('nx_tok');
+  if (!tok) return;
+  // Thông báo cho app biết để reload tin nhắn
+  if (typeof window.loadRoomMessages === 'function' && window.curR) {
+    window.loadRoomMessages(window.curR);
+  }
+  // Trigger background sync nếu có
+  navigator.serviceWorker?.ready.then(reg => {
+    if ('SyncManager' in window) {
+      reg.sync.register('nexus-pending-messages').catch(() => {});
+    }
+  });
+}
+
+function onSwMessage(e) {
+  const data = e.data ?? {};
+
+  // SW yêu cầu app mở room
+  if (data.type === 'OPEN_ROOM' && data.roomId) {
+    if (typeof window.openRoom === 'function') window.openRoom(data.roomId);
+    return;
+  }
+
+  // SW yêu cầu sync lại tin nhắn (sau background sync)
+  if (data.type === 'SYNC_MESSAGES') {
+    if (typeof window.loadRoomMessages === 'function' && window.curR) {
+      window.loadRoomMessages(window.curR);
+    }
+    return;
+  }
+
+  // SW yêu cầu refresh push subscription
+  if (data.type === 'REFRESH_PUSH_SUB') {
+    setupWebPush().catch(() => {});
+    return;
+  }
+}
+
+// Khi user mở room → báo SW xóa notification của room đó
+function clearRoomNotification(roomId) {
+  if (!roomId || !navigator.serviceWorker?.controller) return;
+  navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_ROOM_NOTIF', roomId });
 }
 
 // ── 4. Patch: home list shows name + email below ────────────────
@@ -546,6 +631,7 @@ function patchOpenRoom() {
     injectCallButton();
     injectAttachButton();
     updateCallBtn();
+    clearRoomNotification(roomId); // xóa notification của room đã mở
   };
 }
 
